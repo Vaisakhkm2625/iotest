@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Audio, Video, and Mic Tester</title>
+    <title>Audio, Video, Microphone, and Screenshare Tester</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -37,6 +37,7 @@
             border-radius: 5px;
             cursor: pointer;
             font-size: 1rem;
+            margin: 5px;
         }
         button:hover {
             background: #3700b3;
@@ -45,7 +46,7 @@
 </head>
 <body>
     <header>
-        <h1>Audio, Video, and Microphone Tester</h1>
+        <h1>Audio, Video, Microphone, and Screenshare Tester</h1>
     </header>
     <div class="container">
         <h2>Video and Audio</h2>
@@ -53,6 +54,14 @@
         <br />
         <button id="startVideo">Start Video</button>
         <button id="stopVideo">Stop Video</button>
+
+        <h2>Screenshare Test</h2>
+        <p>Share a screen or window to test screenshare capture. Some browsers may prompt for which screen/window/tab to share.</p>
+        <video id="screenVideo" autoplay playsinline controls></video>
+        <br />
+        <button id="startScreen">Start Screenshare</button>
+        <button id="stopScreen">Stop Screenshare</button>
+
         <h2>Microphone Test</h2>
         <audio id="audio" autoplay controls></audio>
         <br />
@@ -65,10 +74,12 @@
     </div>
     <script>
         const videoElement = document.getElementById("video");
+        const screenVideoElement = document.getElementById("screenVideo");
         const audioElement = document.getElementById("audio");
         const micLevelElement = document.getElementById("micLevel");
         let videoStream = null;
         let audioStream = null;
+        let screenStream = null;
 
         // Start Video Stream
         document.getElementById("startVideo").addEventListener("click", async () => {
@@ -85,6 +96,37 @@
             if (videoStream) {
                 videoStream.getTracks().forEach(track => track.stop());
                 videoElement.srcObject = null;
+                videoStream = null;
+            }
+        });
+
+        // Start Screenshare (Display Media)
+        document.getElementById("startScreen").addEventListener("click", async () => {
+            try {
+                // getDisplayMedia may request a screen/window/tab. Some browsers also allow capturing system audio.
+                screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: false });
+                screenVideoElement.srcObject = screenStream;
+
+                // If the shared stream ends (user hits "Stop sharing" from browser UI), clean up
+                const [track] = screenStream.getVideoTracks();
+                track.addEventListener('ended', () => {
+                    if (screenStream) {
+                        screenStream.getTracks().forEach(t => t.stop());
+                        screenVideoElement.srcObject = null;
+                        screenStream = null;
+                    }
+                });
+            } catch (error) {
+                alert("Unable to start screenshare: " + error.message);
+            }
+        });
+
+        // Stop Screenshare
+        document.getElementById("stopScreen").addEventListener("click", () => {
+            if (screenStream) {
+                screenStream.getTracks().forEach(track => track.stop());
+                screenVideoElement.srcObject = null;
+                screenStream = null;
             }
         });
 
@@ -119,6 +161,7 @@
                 audioStream.getTracks().forEach(track => track.stop());
                 audioElement.srcObject = null;
                 micLevelElement.textContent = "";
+                audioStream = null;
             }
         });
 
